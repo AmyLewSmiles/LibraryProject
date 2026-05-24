@@ -1,0 +1,18 @@
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+.env
+venv/
+.venv/
+
+# Flask
+instance/
+*.log
+
+# macOS
+.DS_Store
+
+# Config (contains your saved library settings)
+# Remove this line if you want to commit your library config
+config.json

@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Library Book Checker</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='app.css') }}">
+</head>
+<body>
+<div class="app">
+
+  <header class="app-header">
+    <h1>📚 Library Book Checker</h1>
+    <p>Check your Storygraph TBR list against Libby and Kindle Unlimited</p>
+  </header>
+
+  <div class="main-grid">
+
+    <!-- ── Library configuration ── -->
+    <section class="card" id="libraries-panel">
+      <h2>My Libraries</h2>
+      <div id="library-list"></div>
+      <button class="btn-secondary" id="add-lib-btn">+ Add Library</button>
+      <div class="library-footer">
+        <button class="btn-primary" id="save-btn">Save Libraries</button>
+        <span id="save-status" class="save-status"></span>
+      </div>
+    </section>
+
+    <!-- ── Upload & run ── -->
+    <section class="card" id="run-panel">
+      <h2>Check My TBR List</h2>
+
+      <label id="drop-zone" class="drop-zone" for="file-input">
+        <div class="drop-zone-inner">
+          <div class="icon">📂</div>
+          <p class="drop-hint-desktop">Drop your Storygraph CSV here, or <span class="link">browse</span></p>
+          <p class="drop-hint-mobile">Tap to upload your Storygraph CSV</p>
+        </div>
+      </label>
+      <input type="file" id="file-input" accept=".csv,text/csv,text/plain,application/csv" hidden>
+
+      <div class="options">
+        <label class="option-row">
+          <input type="checkbox" id="skip-ku">
+          <span>Skip Kindle Unlimited check <span class="help-icon" data-tooltip="Amazon actively blocks automated requests, so KU results are often unavailable. You may see ⚠ errors instead of real data.">ⓘ</span></span>
+        </label>
+        <div class="option-row">
+          <span>Request delay <span class="help-icon" data-tooltip="Pause between each web request to Libby and Kindle Unlimited. A longer delay is more polite to those sites and less likely to get rate-limited.">ⓘ</span></span>
+          <input type="range" id="delay-slider" min="0.5" max="5.0" step="0.5" value="1.5">
+          <span class="delay-val" id="delay-val">1.5s</span>
+        </div>
+      </div>
+
+      <button class="btn-run" id="run-btn" disabled>▶&nbsp; Run Check</button>
+
+      <div class="filters">
+        <div class="filter-row">
+          <label for="limit-input">Check first <span class="help-icon" data-tooltip="Checks books starting from the top of your CSV, in order. Enter a number to stop after that many books, or leave blank to check all. Edit your CSV to prioritize which books appear first.">ⓘ</span></label>
+          <input type="number" id="limit-input" min="1" step="1" placeholder="all">
+          <span class="filter-unit">books</span>
+        </div>
+        <div class="filter-row">
+          <label for="filter-format">Format</label>
+          <select id="filter-format">
+            <option value="all">All formats</option>
+            <option value="digital">Digital</option>
+            <option value="audio">Audio</option>
+            <option value="physical">Physical</option>
+          </select>
+        </div>
+      </div>
+    </section>
+
+  </div><!-- .main-grid -->
+
+  <!-- ── Progress ── -->
+  <div class="card hidden" id="progress-panel">
+    <div class="progress-header">
+      <span id="progress-label">Checking books…</span>
+      <div class="progress-header-right">
+        <span id="progress-fraction"></span>
+        <button class="btn-stop hidden" id="stop-btn">■&nbsp; Stop</button>
+      </div>
+    </div>
+    <div class="progress-bar">
+      <div class="progress-fill" id="progress-fill" style="width:0%"></div>
+    </div>
+    <p class="current-book" id="current-book"></p>
+  </div>
+
+  <!-- ── Results ── -->
+  <section id="results-panel" class="hidden">
+    <div class="results-header">
+      <h2>Results</h2>
+      <button class="btn-secondary" id="download-btn">⬇ Download Report</button>
+    </div>
+
+    <div class="summary-grid" id="summary-grid">
+      <div class="summary-card available">
+        <div class="summary-count" id="count-available">0</div>
+        <div class="summary-label">Available on Libby</div>
+      </div>
+      <div class="summary-card waitlist">
+        <div class="summary-count" id="count-waitlist">0</div>
+        <div class="summary-label">On Libby waitlist</div>
+      </div>
+      <div class="summary-card ku" id="ku-summary-card">
+        <div class="summary-count" id="count-ku">0</div>
+        <div class="summary-label">On Kindle Unlimited</div>
+      </div>
+    </div>
+
+    <div class="table-wrap">
+      <table id="results-table">
+        <thead id="results-thead"></thead>
+        <tbody id="results-tbody"></tbody>
+      </table>
+    </div>
+  </section>
+
+</div><!-- .app -->
+
+<script src="{{ url_for('static', filename='app.js') }}"></script>
+</body>
+</html>
