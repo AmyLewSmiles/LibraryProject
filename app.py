@@ -15,6 +15,8 @@ import time
 from datetime import datetime
 
 from flask import Flask, Response, jsonify, render_template, request, stream_with_context
+from flask_limiter import Limiter
+from flask_limiter.util import get_remote_address
 
 from check_books import (
     check_kindle_unlimited,
@@ -24,7 +26,15 @@ from check_books import (
 
 app = Flask(__name__)
 
+limiter = Limiter(
+    get_remote_address,
+    app=app,
+    default_limits=[],
+    storage_uri="memory://",
+)
+
 CONFIG_FILE = os.path.join(os.path.dirname(os.path.abspath(__file__)), "config.json")
+MAX_CSV_BYTES = 5 * 1024 * 1024  # 5 MB
 
 DEFAULT_LIBRARIES = [
     {"name": "SBCL Digital",      "url": "https://libbyapp.com/library/sbcldigital"},
@@ -98,10 +108,16 @@ def post_config():
 
 
 @app.post("/run")
+@limiter.limit("10 per minute")
 def run_check():
     csv_file = request.files.get("csv")
     if not csv_file:
         return jsonify({"error": "No CSV file provided"}), 400
+
+    # Size check before any processing
+    csv_bytes = csv_file.read(MAX_CSV_BYTES + 1)
+    if len(csv_bytes) > MAX_CSV_BYTES:
+        return jsonify({"error": "CSV file too large (max 5 MB)"}), 400
 
     skip_ku = request.form.get("skip_ku", "false").lower() == "true"
 
@@ -130,7 +146,7 @@ def run_check():
         return jsonify({"error": "No valid libraries provided"}), 400
 
     try:
-        csv_text = csv_file.read().decode("utf-8-sig")
+        csv_text = csv_bytes.decode("utf-8-sig")
         books = load_to_read_books_from_string(csv_text)
     except Exception as exc:
         return jsonify({"error": f"CSV parse error: {exc}"}), 400

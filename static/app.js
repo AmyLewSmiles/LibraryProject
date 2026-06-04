@@ -38,7 +38,21 @@ document.addEventListener("DOMContentLoaded", async () => {
 });
 
 // ── Config ─────────────────────────────────────────────────────────────────
+const CONFIG_KEY = "libraryConfig";
+
 async function loadConfig() {
+  // Prefer localStorage (client-side, survives server redeploys)
+  const stored = localStorage.getItem(CONFIG_KEY);
+  if (stored) {
+    try {
+      const cfg = JSON.parse(stored);
+      libraries = Array.isArray(cfg.libraries) ? cfg.libraries : [];
+      renderLibraries();
+      updateRunBtn();
+      return;
+    } catch {}
+  }
+  // Migration path: fetch from server config once, then it lives in localStorage
   try {
     const res = await fetch("/config");
     const cfg = await res.json();
@@ -50,26 +64,16 @@ async function loadConfig() {
   updateRunBtn();
 }
 
-async function saveConfig() {
+function saveConfig() {
   const saveBtn  = document.getElementById("save-btn");
   const statusEl = document.getElementById("save-status");
   saveBtn.disabled = true;
 
   try {
-    const res  = await fetch("/config", {
-      method:  "POST",
-      headers: { "Content-Type": "application/json" },
-      body:    JSON.stringify({ libraries }),
-    });
-    const data = await res.json();
-    if (data.ok) {
-      statusEl.className   = "save-status";
-      statusEl.textContent = "Saved ✓";
-      setTimeout(() => (statusEl.textContent = ""), 2500);
-    } else {
-      statusEl.className   = "save-status error";
-      statusEl.textContent = data.error || "Save failed";
-    }
+    localStorage.setItem(CONFIG_KEY, JSON.stringify({ libraries }));
+    statusEl.className   = "save-status";
+    statusEl.textContent = "Saved ✓";
+    setTimeout(() => (statusEl.textContent = ""), 2500);
   } catch {
     statusEl.className   = "save-status error";
     statusEl.textContent = "Save failed";
@@ -154,6 +158,10 @@ function setupFileInput() {
 function handleFile(file) {
   if (!file.name.toLowerCase().endsWith(".csv")) {
     alert("Please select a .csv file.");
+    return;
+  }
+  if (file.size > 5 * 1024 * 1024) {
+    alert("CSV file is too large (max 5 MB).");
     return;
   }
   selectedFile = file;
