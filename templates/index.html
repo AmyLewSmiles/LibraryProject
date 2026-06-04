@@ -3,14 +3,14 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Library Book Checker</title>
+  <title>ReadMyTBR</title>
   <link rel="stylesheet" href="{{ url_for('static', filename='app.css') }}">
 </head>
 <body>
 <div class="app">
 
   <header class="app-header">
-    <h1>📚 Library Book Checker</h1>
+    <h1>📚 ReadMyTBR</h1>
     <p>Check your Storygraph TBR list against Libby and Kindle Unlimited</p>
   </header>
 
@@ -18,7 +18,7 @@
 
     <!-- ── Library configuration ── -->
     <section class="card" id="libraries-panel">
-      <h2>My Libraries</h2>
+      <h2>My Libraries <span class="help-icon" data-tooltip="Add the Libby libraries you have a card for. Paste the full Libbyapp URL (e.g. https://libbyapp.com/library/lacountylibrary) or just the library key. Your libraries are saved in your browser.">ⓘ</span></h2>
       <div id="library-list"></div>
       <button class="btn-secondary" id="add-lib-btn">+ Add Library</button>
       <div class="library-footer">
@@ -38,6 +38,7 @@
           <p class="drop-hint-mobile">Tap to upload your Storygraph CSV</p>
         </div>
       </label>
+      <p class="drop-hint-tip">Export from Storygraph: <em>Profile → Export your data</em> — use the <em>To-Read</em> shelf export. <span class="help-icon" data-tooltip="In Storygraph, go to your Profile page, scroll to the bottom and click 'Export your data'. Download the CSV for your To-Read shelf. Only books with status 'to-read' will be checked.">ⓘ</span></p>
       <input type="file" id="file-input" accept=".csv,text/csv,text/plain,application/csv" hidden>
 
       <div class="options">
@@ -61,7 +62,7 @@
           <span class="filter-unit">books</span>
         </div>
         <div class="filter-row">
-          <label for="filter-format">Format</label>
+          <label for="filter-format">Format <span class="help-icon" data-tooltip="Filter by the format you want. 'Digital' matches ebooks, 'Audio' matches audiobooks, 'Physical' matches hardcover and paperback. This uses the format Storygraph recorded for each book.">ⓘ</span></label>
           <select id="filter-format">
             <option value="all">All formats</option>
             <option value="digital">Digital</option>

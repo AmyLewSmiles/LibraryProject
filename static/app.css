@@ -260,6 +260,11 @@ body {
   text-decoration: underline;
 }
 .drop-hint-mobile { display: none; }
+.drop-hint-tip {
+  margin: 6px 0 0;
+  font-size: 0.8rem;
+  color: var(--c-text-muted, #888);
+}
 @media (hover: none) and (pointer: coarse) {
   .drop-hint-desktop { display: none; }
   .drop-hint-mobile  { display: block; }
