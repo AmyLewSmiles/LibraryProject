@@ -16,3 +16,4 @@ instance/
 # Config (contains your saved library settings)
 # Remove this line if you want to commit your library config
 config.json
+config.json
