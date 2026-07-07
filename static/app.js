@@ -3,15 +3,22 @@
 // ── State ──────────────────────────────────────────────────────────────────
 let libraries       = [];   // [{name, url}, ...]
 let selectedFile    = null;
+let selectedCsvText = null;  // raw text of the currently loaded CSV, so it can be re-run later
 let bookCount       = 0;
 let allBooks        = [];   // all to-read books parsed from CSV
 let results         = [];
 let runLibraries    = [];   // snapshot of libraries used in the current run
 let abortController = null;
+let isPaused        = false;
+let pauseRequested  = false; // set right before an abort() triggered by Pause, so the
+                              // catch/finally can tell a pause apart from a hard Stop
+
+const RESULTS_STORAGE_KEY = "lastRunResults";
 
 // ── Init ───────────────────────────────────────────────────────────────────
 document.addEventListener("DOMContentLoaded", async () => {
   await loadConfig();
+  restoreLastRunOnLoad();
 
   // One-time button wiring (not inside renderLibraries so listeners don't stack)
   document.getElementById("add-lib-btn").addEventListener("click", () => {
@@ -28,7 +35,8 @@ document.addEventListener("DOMContentLoaded", async () => {
   setupFileInput();
   setupDelaySlider();
 
-  document.getElementById("run-btn").addEventListener("click", startRun);
+  document.getElementById("run-btn").addEventListener("click", () => startRun());
+  document.getElementById("pause-btn").addEventListener("click", togglePause);
   document.getElementById("stop-btn").addEventListener("click", stopRun);
   document.getElementById("skip-ku").addEventListener("change", () => {
     toggleKuCard(!document.getElementById("skip-ku").checked);
@@ -128,8 +136,47 @@ function renderLibraries() {
       updateRunBtn();
     });
 
+    // Auto-fill the name from Libby's own directory once the URL resolves to
+    // a real library, so users aren't stuck typing a name manually.
+    entry.querySelector(".lib-url-input").addEventListener("blur", (e) => {
+      const i = Number(e.target.dataset.idx);
+      const k = extractLibbyKey(e.target.value);
+      if (k && !libraries[i].name.trim()) autoFillLibraryName(i, k);
+    });
+    if (keyValid && !lib.name.trim()) autoFillLibraryName(idx, key);
+
     list.appendChild(entry);
   });
+}
+
+// ── Auto-fill library name from Libby's directory ─────────────────────────
+const _libraryNameCache = new Map(); // key -> name | null, avoids refetching
+
+async function fetchLibraryName(key) {
+  if (_libraryNameCache.has(key)) return _libraryNameCache.get(key);
+  let name = null;
+  try {
+    const res  = await fetch(`https://thunder.api.overdrive.com/v2/libraries/${encodeURIComponent(key)}?x-client-id=dewey`);
+    const data = res.ok ? await res.json() : null;
+    if (data && typeof data.name === "string") name = data.name;
+  } catch { /* best-effort; user can still type a name manually */ }
+  _libraryNameCache.set(key, name);
+  return name;
+}
+
+async function autoFillLibraryName(idx, key) {
+  const name = await fetchLibraryName(key);
+  if (!name) return;
+
+  // The row may have changed (edited, removed, renamed) while the request
+  // was in flight — only apply if it's still the same empty-name row.
+  const lib = libraries[idx];
+  if (!lib || lib.name.trim() || extractLibbyKey(lib.url || "") !== key) return;
+
+  lib.name = name;
+  const nameInput = document.querySelector(`.lib-name-input[data-idx="${idx}"]`);
+  if (nameInput) nameInput.value = name;
+  updateRunBtn();
 }
 
 // ── File handling ──────────────────────────────────────────────────────────
@@ -168,7 +215,8 @@ function handleFile(file) {
 
   const reader = new FileReader();
   reader.onload = (e) => {
-    allBooks = parseAllToReadBooks(e.target.result);
+    selectedCsvText = e.target.result;
+    allBooks = parseAllToReadBooks(selectedCsvText);
     showFileSelected(file.name, allBooks.length);
     updateFilteredCount();
   };
@@ -253,8 +301,8 @@ function showFileSelected(name, count) {
   const zone = document.getElementById("drop-zone");
   zone.innerHTML = `
     <div class="file-selected">
-      <div>
-        <div class="file-name">📄 ${esc(name)}</div>
+      <div class="file-info">
+        <div class="file-name" title="${esc(name)}">📄 ${esc(name)}</div>
         <div class="book-count">${count} to-read book${count !== 1 ? "s" : ""} found</div>
       </div>
       <button class="btn-clear" id="clear-btn" title="Remove file">×</button>
@@ -268,9 +316,10 @@ function showFileSelected(name, count) {
 }
 
 function clearFile() {
-  selectedFile = null;
-  bookCount    = 0;
-  allBooks     = [];
+  selectedFile    = null;
+  selectedCsvText = null;
+  bookCount       = 0;
+  allBooks        = [];
   document.getElementById("file-input").value = "";
   document.getElementById("drop-zone").innerHTML = `
     <div class="drop-zone-inner">
@@ -306,9 +355,17 @@ function updateRunBtn() {
 }
 
 // ── Run ────────────────────────────────────────────────────────────────────
-async function startRun() {
-  results      = [];
-  runLibraries = libraries.filter((l) => l.name.trim() && extractLibbyKey(l.url || ""));
+async function startRun({ resume = false } = {}) {
+  // A fresh run always starts at the top of the CSV (start_index 0, cleared
+  // results). Resuming reuses the same file/settings and picks up at
+  // results.length, so already-checked books aren't looked up again.
+  if (!resume) {
+    results      = [];
+    runLibraries = libraries.filter((l) => l.name.trim() && extractLibbyKey(l.url || ""));
+    document.getElementById("results-tbody").innerHTML = "";
+    resetSummary();
+    clearResultsMeta();
+  }
 
   const skipKu       = document.getElementById("skip-ku").checked;
   const formatFilter = document.getElementById("filter-format").value;
@@ -316,15 +373,18 @@ async function startRun() {
   const limit        = !isNaN(limitVal) && limitVal > 0 ? limitVal : 0;
 
   abortController = new AbortController();
+  isPaused = false;
 
-  // Reset UI
+  // Reset / update UI
   document.getElementById("run-btn").disabled = true;
+  document.getElementById("pause-btn").textContent = "⏸ Pause";
+  document.getElementById("pause-btn").classList.remove("hidden");
   document.getElementById("stop-btn").classList.remove("hidden");
   document.getElementById("progress-panel").classList.remove("hidden");
-  document.getElementById("results-panel").classList.add("hidden");
-  document.getElementById("results-tbody").innerHTML = "";
-  resetSummary();
-  buildTableHead(runLibraries, skipKu);
+  if (!resume) {
+    document.getElementById("results-panel").classList.add("hidden");
+    buildTableHead(runLibraries, skipKu);
+  }
   toggleKuCard(!skipKu);
 
   const formData = new FormData();
@@ -334,6 +394,7 @@ async function startRun() {
   formData.append("libraries",     JSON.stringify(runLibraries));
   formData.append("format_filter", formatFilter);
   formData.append("limit",         String(limit));
+  formData.append("start_index",  String(resume ? results.length : 0));
 
   let total = 0;
 
@@ -381,23 +442,161 @@ async function startRun() {
     }
   } catch (err) {
     if (err.name === "AbortError") {
-      setProgress(results.length, total || results.length,
-        `Stopped — showing ${results.length} of ${total} book${total !== 1 ? "s" : ""}`);
+      if (pauseRequested) {
+        setProgress(results.length, total || results.length,
+          `Paused — ${results.length} of ${total || results.length} checked`);
+      } else {
+        setProgress(results.length, total || results.length,
+          `Stopped — showing ${results.length} of ${total} book${total !== 1 ? "s" : ""}`);
+      }
     } else {
       alert("Connection error: " + err.message);
     }
   } finally {
     abortController = null;
-    document.getElementById("run-btn").disabled = false;
-    document.getElementById("stop-btn").classList.add("hidden");
-    document.getElementById("results-panel").classList.remove("hidden");
-    setTimeout(() => document.getElementById("progress-panel").classList.add("hidden"), results.length ? 3000 : 1200);
+    // Save whenever the run stops progressing — paused, stopped, or
+    // completed — so partial progress isn't lost if you don't finish.
+    saveRunResults(skipKu);
+
+    if (pauseRequested) {
+      pauseRequested = false;
+      isPaused = true;
+      document.getElementById("pause-btn").textContent = "▶ Resume";
+      // run-btn stays disabled: Resume or Stop are the only ways forward
+      // while paused, so a fresh run can't clobber the in-progress one.
+      document.getElementById("results-panel").classList.remove("hidden");
+    } else {
+      isPaused = false;
+      document.getElementById("run-btn").disabled = false;
+      document.getElementById("pause-btn").classList.add("hidden");
+      document.getElementById("stop-btn").classList.add("hidden");
+      document.getElementById("results-panel").classList.remove("hidden");
+      setTimeout(() => document.getElementById("progress-panel").classList.add("hidden"), results.length ? 3000 : 1200);
+    }
   }
 }
 
-// ── Stop ───────────────────────────────────────────────────────────────────
+// ── Pause / Resume / Stop ──────────────────────────────────────────────────
+function togglePause() {
+  if (isPaused) {
+    startRun({ resume: true });
+  } else if (abortController) {
+    pauseRequested = true;
+    abortController.abort();
+  }
+}
+
 function stopRun() {
-  if (abortController) abortController.abort();
+  if (abortController) {
+    // Mid-flight: let the fetch's own catch/finally handle the UI reset.
+    pauseRequested = false;
+    abortController.abort();
+    return;
+  }
+  if (!isPaused) return;
+
+  // Cancelling a paused run: nothing in-flight to abort, so reset UI here.
+  isPaused = false;
+  document.getElementById("run-btn").disabled = false;
+  document.getElementById("pause-btn").classList.add("hidden");
+  document.getElementById("stop-btn").classList.add("hidden");
+  document.getElementById("results-panel").classList.remove("hidden");
+  setProgress(results.length, results.length,
+    `Stopped — showing ${results.length} book${results.length !== 1 ? "s" : ""}`);
+  setTimeout(() => document.getElementById("progress-panel").classList.add("hidden"), results.length ? 3000 : 1200);
+}
+
+// ── Saved-results persistence ────────────────────────────────────────────
+// Automatically shows the last completed run's results when the app is
+// reopened, so links stay clickable without re-running the check.
+function timeAgo(ms) {
+  const mins = Math.round((Date.now() - ms) / 60000);
+  if (mins < 1)  return "just now";
+  if (mins < 60) return `${mins} minute${mins !== 1 ? "s" : ""} ago`;
+  const hours = Math.round(mins / 60);
+  if (hours < 24) return `${hours} hour${hours !== 1 ? "s" : ""} ago`;
+  const days = Math.round(hours / 24);
+  return `${days} day${days !== 1 ? "s" : ""} ago`;
+}
+
+function loadSavedRun() {
+  try {
+    return JSON.parse(localStorage.getItem(RESULTS_STORAGE_KEY));
+  } catch {
+    return null;
+  }
+}
+
+function saveRunResults(skipKu) {
+  if (!results.length) return;
+  try {
+    localStorage.setItem(RESULTS_STORAGE_KEY, JSON.stringify({
+      savedAt:  Date.now(),
+      fileName: selectedFile ? selectedFile.name : "",
+      csvText:  selectedCsvText || "",
+      runLibraries,
+      skipKu,
+      results,
+    }));
+  } catch { /* storage full/unavailable — just won't be there to restore next time */ }
+}
+
+function restoreLastRunOnLoad() {
+  const saved = loadSavedRun();
+  if (!saved || !saved.results?.length) return;
+
+  results      = saved.results;
+  runLibraries = saved.runLibraries;
+
+  document.getElementById("skip-ku").checked = saved.skipKu;
+  toggleKuCard(!saved.skipKu);
+
+  document.getElementById("results-tbody").innerHTML = "";
+  resetSummary();
+  buildTableHead(runLibraries, saved.skipKu);
+  for (const r of results) renderResultRow(r, saved.skipKu);
+  updateSummary();
+
+  document.getElementById("results-panel").classList.remove("hidden");
+  showResultsMeta(saved);
+
+  // Re-attach the original CSV so Run Check works immediately without
+  // re-uploading the file.
+  if (saved.csvText) {
+    selectedCsvText = saved.csvText;
+    selectedFile    = new File([saved.csvText], saved.fileName || "saved.csv", { type: "text/csv" });
+    allBooks        = parseAllToReadBooks(saved.csvText);
+    showFileSelected(selectedFile.name, allBooks.length);
+    updateFilteredCount();
+  }
+}
+
+function showResultsMeta(saved) {
+  const el = document.getElementById("results-meta");
+  const of = saved.fileName ? ` of ${esc(saved.fileName)}` : "";
+  el.innerHTML = `Showing your last check${of}, ${timeAgo(saved.savedAt)} — availability may have changed. <a href="#" id="clear-results-btn">Clear</a>`;
+  el.classList.remove("hidden");
+  document.getElementById("clear-results-btn").addEventListener("click", (e) => {
+    e.preventDefault();
+    clearSavedResults();
+  });
+}
+
+function clearResultsMeta() {
+  const el = document.getElementById("results-meta");
+  el.classList.add("hidden");
+  el.innerHTML = "";
+}
+
+function clearSavedResults() {
+  localStorage.removeItem(RESULTS_STORAGE_KEY);
+  results      = [];
+  runLibraries = [];
+  document.getElementById("results-tbody").innerHTML = "";
+  resetSummary();
+  document.getElementById("results-panel").classList.add("hidden");
+  clearResultsMeta();
+  clearFile();
 }
 
 // ── Progress ───────────────────────────────────────────────────────────────
@@ -419,7 +618,11 @@ function buildTableHead(libs, skipKu) {
 
 function appendResult(data, skipKu) {
   results.push(data);
+  renderResultRow(data, skipKu);
+  updateSummary();
+}
 
+function renderResultRow(data, skipKu) {
   const tr = document.createElement("tr");
   let html = `
     <td>
@@ -435,8 +638,6 @@ function appendResult(data, skipKu) {
   }
   tr.innerHTML = html;
   document.getElementById("results-tbody").appendChild(tr);
-
-  updateSummary();
 }
 
 function libbyBadge(res) {

@@ -90,7 +90,9 @@ def index():
 
 @app.get("/config")
 def get_config():
-    return jsonify(load_config())
+    # Config is stored client-side in localStorage.
+    # Return empty so new users start fresh and don't see another user's libraries.
+    return jsonify({"libraries": []})
 
 
 @app.post("/config")
@@ -155,14 +157,22 @@ def run_check():
     limit         = int(request.form.get("limit", "0") or "0")
     books = _apply_book_filters(books, format_filter, limit)
 
+    try:
+        start_index = int(request.form.get("start_index", "0") or "0")
+    except ValueError:
+        start_index = 0
+    start_index = max(0, min(start_index, len(books)))
+
     @stream_with_context
     def generate():
         def evt(payload: dict) -> str:
             return f"data: {json.dumps(payload)}\n\n"
 
+        # "total" always reflects the full filtered list so a resumed run's
+        # progress bar picks up where a paused run left off instead of resetting.
         yield evt({"type": "total", "count": len(books)})
 
-        for i, book in enumerate(books, 1):
+        for i, book in enumerate(books[start_index:], start_index + 1):
             title  = book["title"]
             author = book["author"]
             yield evt({"type": "progress", "i": i, "title": title, "author": author})

@@ -58,6 +58,8 @@ body {
   border-radius: var(--radius);
   box-shadow: var(--shadow);
   padding: 24px;
+  min-width: 0; /* grid items default to min-width:auto, which lets long unbroken
+                   content (e.g. a long filename) stretch the column past its fr share */
 }
 .card h2 {
   font-size: 0.75rem;
@@ -232,7 +234,8 @@ body {
 
 /* ── Drop zone ────────────────────────────────────────────────────────────── */
 .drop-zone {
-  display: block;
+  display: flex;
+  min-height: 154px; /* fixed so selecting a file doesn't collapse the box and shift the page */
   border: 2px dashed var(--c-border);
   border-radius: var(--radius);
   cursor: pointer;
@@ -244,6 +247,7 @@ body {
   text-decoration: none;
   color: inherit;
 }
+.drop-zone > * { width: 100%; }
 .drop-zone:hover, .drop-zone.drag-over {
   border-color: var(--c-primary);
   background: #f0fdf4;
@@ -251,6 +255,10 @@ body {
 .drop-zone-inner {
   padding: 28px 20px;
   text-align: center;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
 }
 .drop-zone .icon { font-size: 2rem; margin-bottom: 8px; }
 .drop-zone p { color: var(--c-text-muted); font-size: 0.875rem; }
@@ -280,7 +288,15 @@ body {
   padding: 14px 16px;
   background: #f0fdf4;
 }
-.file-name { font-weight: 600; font-size: 0.875rem; color: var(--c-available); }
+.file-info { min-width: 0; }
+.file-name {
+  font-weight: 600;
+  font-size: 0.875rem;
+  color: var(--c-available);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
 .book-count { font-size: 0.8rem; color: var(--c-text-muted); margin-top: 2px; }
 .btn-clear {
   background: none;
@@ -380,6 +396,19 @@ body {
 }
 .btn-stop:hover { background: #fecaca; }
 
+.btn-pause {
+  background: var(--c-secondary-bg);
+  color: var(--c-text);
+  border: 1px solid var(--c-border);
+  border-radius: var(--radius-sm);
+  padding: 3px 10px;
+  font-size: 0.78rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+.btn-pause:hover { background: var(--c-secondary-hover); }
+
 /* ── Progress ─────────────────────────────────────────────────────────────── */
 #progress-panel { margin-bottom: 16px; }
 .progress-header {
@@ -424,6 +453,12 @@ body {
   margin-bottom: 16px;
 }
 .results-header h2 { font-size: 1.25rem; font-weight: 600; }
+.results-meta {
+  margin: 2px 0 0;
+  font-size: 0.8rem;
+  color: var(--c-text-muted);
+}
+.results-meta a { color: inherit; text-decoration: underline; }
 
 /* ── Summary cards ────────────────────────────────────────────────────────── */
 .summary-grid {

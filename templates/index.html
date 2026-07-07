@@ -81,6 +81,7 @@
       <span id="progress-label">Checking books…</span>
       <div class="progress-header-right">
         <span id="progress-fraction"></span>
+        <button class="btn-pause hidden" id="pause-btn">⏸&nbsp; Pause</button>
         <button class="btn-stop hidden" id="stop-btn">■&nbsp; Stop</button>
       </div>
     </div>
@@ -93,7 +94,10 @@
   <!-- ── Results ── -->
   <section id="results-panel" class="hidden">
     <div class="results-header">
-      <h2>Results</h2>
+      <div>
+        <h2>Results</h2>
+        <p class="results-meta hidden" id="results-meta"></p>
+      </div>
       <button class="btn-secondary" id="download-btn">⬇ Download Report</button>
     </div>
 
