@@ -10,7 +10,10 @@
 <div class="app">
 
   <header class="app-header">
-    <h1>📚 ReadMyTBR</h1>
+    <div class="app-header-top">
+      <h1>📚 ReadMyTBR</h1>
+      <a class="help-link" href="{{ url_for('help_page') }}">Help / FAQ</a>
+    </div>
     <p>Check your Storygraph TBR list against Libby and Kindle Unlimited</p>
   </header>
 
@@ -18,7 +21,7 @@
 
     <!-- ── Library configuration ── -->
     <section class="card" id="libraries-panel">
-      <h2>My Libraries <span class="help-icon" data-tooltip="Add the Libby libraries you have a card for. Paste the full Libbyapp URL (e.g. https://libbyapp.com/library/lacountylibrary) or just the library key. Your libraries are saved in your browser.">ⓘ</span></h2>
+      <h2>My Libraries <span class="help-icon help-icon--below" data-tooltip="Add the Libby libraries you have a card for. Paste the full Libbyapp URL (e.g. https://libbyapp.com/library/lacountylibrary) or just the library key. Your libraries are saved in your browser.">ⓘ</span></h2>
       <div id="library-list"></div>
       <button class="btn-secondary" id="add-lib-btn">+ Add Library</button>
       <div class="library-footer">

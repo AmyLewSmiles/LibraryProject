@@ -45,12 +45,61 @@ body {
 }
 
 .app-header { margin-bottom: 28px; }
+.app-header-top {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+}
 .app-header h1 {
   font-size: 1.75rem;
   font-weight: 700;
   color: var(--c-primary);
 }
 .app-header p { color: var(--c-text-muted); margin-top: 4px; }
+.help-link {
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--c-primary);
+  text-decoration: underline;
+  white-space: nowrap;
+}
+
+/* ── Help / FAQ page ──────────────────────────────────────────────────────── */
+.help-section { margin-bottom: 16px; }
+.help-steps {
+  margin: 0;
+  padding-left: 1.25em;
+}
+.help-steps li { margin-bottom: 14px; }
+.help-steps li:last-child { margin-bottom: 0; }
+.help-substeps {
+  margin: 8px 0;
+  padding-left: 1.25em;
+  color: var(--c-text-muted);
+}
+.help-substeps li { margin-bottom: 6px; }
+.help-steps code, .faq-item code {
+  background: var(--c-secondary-bg);
+  border-radius: var(--radius-sm);
+  padding: 1px 5px;
+  font-size: 0.85em;
+}
+
+.faq-item {
+  border-bottom: 1px solid var(--c-border);
+  padding: 12px 0;
+}
+.faq-item:last-of-type { border-bottom: none; padding-bottom: 0; }
+.faq-item summary {
+  cursor: pointer;
+  font-weight: 600;
+}
+.faq-item summary:hover { color: var(--c-primary); }
+.faq-item p {
+  margin-top: 8px;
+  color: var(--c-text-muted);
+}
 
 /* ── Cards ────────────────────────────────────────────────────────────────── */
 .card {
@@ -213,6 +262,8 @@ body {
   background: #1a1a1a;
   color: #fff;
   font-size: 0.75rem;
+  font-weight: 400;
+  text-transform: none; /* don't inherit uppercase/bold from a heading ancestor like .card h2 */
   line-height: 1.4;
   padding: 6px 10px;
   border-radius: var(--radius-sm);
@@ -224,6 +275,13 @@ body {
   z-index: 10;
 }
 .help-icon:hover::after { opacity: 1; }
+
+/* The "My Libraries" heading sits right at the top of the page, so its
+   tooltip has nowhere to expand upward without clipping off-screen. */
+.help-icon--below::after {
+  bottom: auto;
+  top: calc(100% + 6px);
+}
 
 /* ── Run panel ────────────────────────────────────────────────────────────── */
 #run-panel {

@@ -88,6 +88,11 @@ def index():
     return render_template("index.html")
 
 
+@app.get("/help")
+def help_page():
+    return render_template("help.html")
+
+
 @app.get("/config")
 def get_config():
     # Config is stored client-side in localStorage.

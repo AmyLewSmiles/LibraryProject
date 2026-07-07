@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Help / FAQ — ReadMyTBR</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='app.css') }}">
+</head>
+<body>
+<div class="app">
+
+  <header class="app-header">
+    <div class="app-header-top">
+      <h1>📚 ReadMyTBR</h1>
+      <a class="help-link" href="{{ url_for('index') }}">← Back to app</a>
+    </div>
+    <p>Help &amp; frequently asked questions</p>
+  </header>
+
+  <section class="card help-section">
+    <h2>Getting started</h2>
+    <ol class="help-steps">
+      <li>
+        <strong>Export your TBR list from StoryGraph.</strong>
+        Go to your Profile → <em>Export your data</em>, and download the CSV.
+        Only books on your <em>To-Read</em> shelf will be checked.
+      </li>
+      <li>
+        <strong>Find your library's URL and add it.</strong>
+        <ol class="help-substeps">
+          <li>Go to <code>libbyapp.com</code> in a browser (this works even if you normally use the Libby phone app).</li>
+          <li>Click <strong>"Search for a Library"</strong> and type your library system's name, or your city/zip code.</li>
+          <li>Select your library from the results list.</li>
+          <li>Once it loads, copy the URL straight from your browser's address bar — it'll look like <code>https://libbyapp.com/library/yourkey</code>.</li>
+          <li>Paste that URL into a library row in the My Libraries panel here. The name fills in automatically — click Save Libraries once you're done.</li>
+        </ol>
+        Have a card at more than one library? Repeat this for each one — click "+ Add Library" to add another row.
+      </li>
+      <li>
+        <strong>Upload your CSV and click Run Check.</strong>
+        Books are checked from the top of the file down. Use the delay slider
+        and the "Check first N books" option if you have a long list and want
+        to go easy on Libby/Amazon's servers.
+      </li>
+      <li>
+        <strong>Click through your results.</strong>
+        Each availability badge (eBook, Audio, Kindle Unlimited) links straight
+        to the book on Libby or Amazon.
+      </li>
+      <li>
+        <strong>Pause, resume, or stop anytime.</strong>
+        Your progress is saved automatically in your browser as you go, so
+        closing the tab or reopening the app later brings back your last
+        results — and the same CSV, ready to check again.
+      </li>
+    </ol>
+  </section>
+
+  <section class="card help-section">
+    <h2>FAQ</h2>
+
+    <details class="faq-item">
+      <summary>Why is the "Run Check" button greyed out?</summary>
+      <p>It needs two things: a CSV file, and at least one library that has
+      <em>both</em> a name and a valid Libby URL filled in. If a library's
+      name is empty, it should auto-fill a few seconds after you paste the
+      URL — if it doesn't, the library key may not be recognized.</p>
+    </details>
+
+    <details class="faq-item">
+      <summary>Why do I see Kindle Unlimited errors, like "Amazon bot protection blocked this request"?</summary>
+      <p>Amazon actively blocks a lot of automated traffic, so Kindle
+      Unlimited checks are best-effort — sometimes they work, sometimes
+      they don't. If it's unreliable for you, turn on
+      "Skip Kindle Unlimited check" to skip it entirely and speed up your runs.</p>
+    </details>
+
+    <details class="faq-item">
+      <summary>What happens if I pause or close the tab partway through a check?</summary>
+      <p>Your results are saved to your browser automatically, whether a
+      check finishes, gets paused, or is stopped early. Reopening the app
+      shows your last results and reloads the same CSV, so you can pick up
+      right where you left off or re-run the whole thing.</p>
+    </details>
+
+    <details class="faq-item">
+      <summary>Where is my data stored? Is it private?</summary>
+      <p>Everything — your libraries, your CSV, and your results — is
+      stored locally in your own browser. Nothing is kept on the server
+      between requests; a check only sends your CSV data to the server for
+      the duration of that one check.</p>
+    </details>
+
+    <details class="faq-item">
+      <summary>Why doesn't my library show up, or its key looks wrong?</summary>
+      <p>This only works with libraries that use Libby/OverDrive — not all
+      library systems do, so some won't have a Libby URL at all.</p>
+      <p>If the badge next to a library says "no key," the URL pasted in
+      isn't one Libby recognizes. To get the right one: go to
+      <code>libbyapp.com</code>, click "Search for a Library," find and
+      select your library, then copy the URL straight from your browser's
+      address bar once the library's page loads — it should look like
+      <code>https://libbyapp.com/library/yourkey</code>. Pasting just the
+      last part (the key itself, after <code>/library/</code>) also works.</p>
+    </details>
+
+    <details class="faq-item">
+      <summary>What CSV format does this need?</summary>
+      <p>A StoryGraph "to-read" shelf export, with Title, Authors, Format,
+      Read Status, and Date Added columns. Only rows marked
+      <code>to-read</code> are checked.</p>
+    </details>
+
+    <details class="faq-item">
+      <summary>Is this affiliated with StoryGraph, Libby, or Amazon?</summary>
+      <p>No — this is an independent tool built for personal use, and isn't
+      affiliated with or endorsed by StoryGraph, OverDrive/Libby, or Amazon.</p>
+    </details>
+  </section>
+
+</div>
+</body>
+</html>
